@@ -1,0 +1,6 @@
+{
+  "name": "One Payroll Management System",
+  "description": "Integrated public-sector payroll verification, validation, PMEC reconciliation, due-process case management, and immutable audit trail platform for transparency and accountability in Zambia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
