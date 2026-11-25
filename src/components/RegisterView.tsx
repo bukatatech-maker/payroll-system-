@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeftRight, FilePlus2, Search, Upload, UserPlus } from 'lucide-react';
 import { api } from '../lib/api.ts';
 import { formatShortDate, formatZmw } from '../lib/roles.ts';
@@ -19,6 +19,7 @@ interface RegisterViewProps {
   posts: ApprovedPost[];
   transfers: TransferRecord[];
   returns: StationReturn[];
+  focusedStaff?: { staffId: string; nonce: number } | null;
   onRefresh: () => Promise<void>;
   onNotify: (type: 'success' | 'error', message: string) => void;
 }
@@ -30,6 +31,7 @@ export function RegisterView({
   posts,
   transfers,
   returns,
+  focusedStaff,
   onRefresh,
   onNotify,
 }: RegisterViewProps) {
@@ -37,6 +39,15 @@ export function RegisterView({
   const [search, setSearch] = useState('');
   const [districtFilter, setDistrictFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+
+  useEffect(() => {
+    if (focusedStaff?.staffId) {
+      setSubTab('staff');
+      setDistrictFilter('All');
+      setStatusFilter('All');
+      setSearch(focusedStaff.staffId);
+    }
+  }, [focusedStaff]);
 
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);

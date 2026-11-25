@@ -1,0 +1,252 @@
+ONE PAYROLL MANAGEMENT SYSTEM FOR TRANSPARENCY AND ACCOUNTABILITY
+Technical Seminar Report Submitted in Partial Fulfillment of the Requirements for the Award of the Degree of
+BACHELOR OF SCIENCE IN COMPUTER SCIENCE 
+Submitted By
+ANDREW MUMBA
+(Reg. No: 23211351062)
+Under the guidance of
+MS. SHY FLARIN .J
+SCHOOL OF COMPUTER SCIENCE & TECHNOLOGY
+   
+
+
+
+
+
+DMI-ST. EUGENE UNIVERSITY
+CHIBOMBO - ZAMBIA
+ NOV 2026
+
+
+
+
+
+
+                                        DMI-ST. EUGENE UNIVERSITY
+                                                   CHIBOMBO CAMPUS    
+                                                         CERTIFICATE 
+
+Certified that this report titled “ONE PAYROLL MANAGEMENT SYSTEM FOR TRANSPARENCY AND ACCOUNTABILITY” is a bonafide record of the technical seminar presented by ANDREW MUMBA (Reg. No: 23211351062) under our supervision and guidance, towards partial fulfillment of the requirements for the award of the Degree of Bachelor of Science in Computer Science of DMI St. Eugene University.
+
+___________________
+SEMINAR GUIDE
+Mr. Sikwa Mwale
+Lecturer, Dept of CS	___________________
+HEAD OF THE DEPARTMENT
+Mrs. N. Vijayalakshmi
+HOD, CS & Tech	___________________
+DEAN
+Dr. J. Esther
+School of CS & Tech
+Submitted for the B.Sc Degree Technical Seminar Viva Voce held on ____________________
+
+___________________
+INTERNAL EXAMINER	___________________
+EXTERNAL EXAMINER
+ 
+DECLARATION
+I, ANDREW MUMBA (Reg. No: 23211351062), hereby declare that the Technical Seminar Report entitled “ONE PAYROLL MANAGEMENT SYSTEM FOR TRANSPARENCY AND ACCOUNTABILITY”, submitted to the School of Computer Science & Technology, is a record of original work done by me under the guidance of MS FRALINE, and that this report has not been submitted elsewhere for any other degree or diploma.
+PLACE:
+ 
+DATE: 
+
+
+_________________________________
+Signature of the Student
+ACKNOWLEDGEMENT
+
+My sincere gratitude goes to the Almighty God for the blessings and strength bestowed upon me at every stage of this undertaking, enabling me to complete my extension activities successfully without any obstacles.
+I remain deeply indebted in gratitude to our beloved Founder and Chancellor, Rev. Fr. Dr. J.E. Arul Raj, OMI, and the DMI Group of Institutions for their unwavering support and encouragement that made this accomplishment possible.
+I am immensely grateful to the President of the University Council, Dr. T.X.A. Ananth, DMI Group of Institutions, Zambia, for his constant support in innumerable ways, which enabled me to complete my extension activities successfully.
+I also extend my heartfelt appreciation to the  Deputy Vice Chancellor  Academic Affairs, Dr. Arockia Venice, for their continuous encouragement and support throughout the course of this extension activities. I proudly express my sincere gratitude to Rev. Sr. Dr. J. Rani, Director – RMA, for her guidance and motivation.
+I would like to thank Dr. R. Sakthivel, Registrar,   I also extend my gratitude to Mr. Kalonga kamwale, Dean of Students.
+My sincere thanks to Mrs. N. Vijayalakshmi, Head of the Department, School of Computer Science & Technology, and all the staff members of the department for their continuous support throughout my extension activities. I would further like to thank my extension activities supervisor, MS.S FLARIN .J , for his/her valuable time, guidance, and input, which greatly contributed to the successful completion of this work.
+ABSTRACT
+Personnel emoluments are typically among the largest recurrent items of public expenditure, and in education salaries account for most of the budget. When payroll records are inaccurate, fragmented, or poorly verified, public money is lost and trust in public financial management declines. Public sector payroll management in Zambia therefore requires robust verification controls, automated validation, and continuous audit mechanisms so that salaries are paid only to authorized, verified employees.
+This technical report evaluates the challenges faced by Zambia’s Payroll Management and Establishment Control (PMEC) system, using Auditor General reports and parliamentary disclosures published up to October 2026. The findings include 125 Ministry of Education officers who could not be accounted for at their workstations (K1,228,635), 4 officers absent for more than 12 months (K224,612), 205 underage entries and 108 net-pay threshold breaches in 2024, and 1,524 of 4,319 recruited teachers still awaiting placement in March 2026.
+The report places these findings within the literature on transparency and accountability, financial management information systems, international evidence on ghost workers and payroll leakage, continuous auditing, and information security. The literature shows that technology alone does not produce accountability; it works only with clear ownership of records, reliable data, trained staff, and defined follow-up.
+Building on this evidence, the report proposes One Payroll Management System, a single integrated platform in which HR records, approved posts, station verification, and payroll operate on one authoritative dataset. The design combines a 5-step workflow (Register, Verify, Validate, Review, Report), a three-layer prototype architecture on a Node.js server and relational database, automated validation rules, exception dashboards, role-based access control, and an immutable audit trail.
+Crucially, the controls emphasize procedural fairness: a digital flag opens a case for investigation and never triggers an automatic salary stoppage. The report concludes with four recommendations: standardize staff records, schedule multi-level verifications, track every flagged case to resolution, and pilot the system before national rollout.
+Keywords: payroll management, transparency, accountability, establishment control, PMEC, ghost workers, audit trail, role-based access control, Zambia
+TABLE OF CONTENTS
+1. Introduction	7
+1.1 Background & Overview of PMEC	7
+1.2 Problem Statement & Guiding Question	7
+1.3 Objectives & Seminar Scope	7
+2. Literature & Contextual Review	8
+2.1 Auditor General Findings (2024–2025)	8
+2.2 Prolonged Absences & Validation Rule Weaknesses	8
+2.3 Teacher Recruitment & Placement Bottlenecks	8
+2.4 Transparency and Accountability in Public Financial Management	9
+2.5 Payroll and Financial Management Information Systems	9
+2.6 Ghost Workers, Absenteeism and Payroll Leakage	10
+2.7 Integrated Design, Reconciliation and Continuous Auditing	11
+2.8 Security, Access Control and Audit Trails	11
+2.9 Adoption and Success of Public-Sector Information Systems	12
+2.10 Summary of the Literature and Research Gap	12
+3. Methodology & Technical Architecture	14
+3.1 Proposed 5-Step Digital Control Workflow	14
+3.2 Prototype System Architecture	14
+3.3 Automated Validation Rules	15
+3.4 Roles and Access Control	16
+3.5 Operating Cycle and Implementation Considerations	16
+4. Results & Discussion	17
+4.1 Risk Analysis & Systemic Gaps	17
+4.2 Security, Fairness & Data Protection	17
+5. Conclusion & Recommendations	18
+6. References (APA Format)	19
+LIST OF FIGURES & TABLES
+Figure 3.1: Prototype Technical Architecture & Data Flow	15
+Table 2.1: Summary of Auditor General Payroll Findings	8
+Table 2.2: Summary of Key Literature and Relevance	13
+Table 3.1: Proposed Automated Validation Rules	15
+Table 3.2: Proposed User Roles and Permissions	16
+Table 4.1: Summary of Implementation Recommendations	18
+CHAPTER 1 – INTRODUCTION
+1.1 Background & Overview of PMEC
+Public sector payroll management in Zambia depends on maintaining accurate employee records, established authorization channels, and robust technical validation rules. The core system utilized across government Ministries, Provinces, and Spending Agencies (MPSAs) is the Payroll Management and Establishment Control (PMEC) system, overseen by the Ministry of Finance and National Planning (Ministry of Finance, 2026).
+PMEC serves four critical operational functions: facilitating public service salary processing, enforcing establishment control by linking staffing directly to approved posts, monitoring personal-emolument expenditure against allocated national budgets, and maintaining system security permissions for administrative users.
+1.2 Problem Statement & Guiding Question
+Despite the operational framework provided by PMEC, published audit findings from the Auditor General and parliamentary records highlight ongoing challenges. These include staff members who cannot be accounted for at reported workstations, prolonged employee absences without record updating, historical validation rule bypasses during high-volume recruitments, and placement delays following large-scale hiring exercises.
+Guiding Question: How can digital technology strengthen the accuracy, security, and accountability of Zambia’s government payroll while protecting employee due process?
+1.3 Objectives & Seminar Scope
+This seminar evaluates published audit evidence up to October 2026 to identify operational control risks and propose actionable technical architecture. The objective is not to accuse individual employees but to design automated digital checks, exception monitoring dashboards, and structured review processes that reduce manual errors and enhance public payroll transparency.
+The title reflects a single-system principle: HR records, approved posts, station verification, and payroll are tied to one authoritative staff record (a unique Staff ID), so every change to a person’s status, station, or pay can be traced to its origin. The proposal adds a unified control layer to PMEC rather than replacing it.
+CHAPTER 2 – LITERATURE & CONTEXTUAL REVIEW
+2.1 Auditor General Findings (2024–2025)
+Recent audit releases provide objective data on payroll control vulnerabilities. As reported on 26 October 2026 regarding the Auditor General’s 2025 findings, 125 Ministry of Education officers across 24 stations could not be physically accounted for at their reported workstations, representing a total reported salary expenditure of K1,228,635 (News Diggers, 2026). Table 2.1 summarizes the documented findings used in this report.
+Audit Period	Identified Issue / Finding	Volume / Financial Impact	Source Reference
+2025 Audit	Officers unaccounted for at reported stations	125 officers (K1,228,635)	AGO Main Report (2026)
+2025 Audit	Officers absent from duty > 12 months	4 officers (K224,612)	ZNBC Coverage (2026)
+2024 Audit	Underage entries on active payroll	205 officers under 18 yrs	News Diggers (2025)
+2024 Audit	Take-home pay below statutory threshold (< 40% pay)	108 officers	Auditor General (2024)
+Table 2.1: Summary of Documented Auditor General Payroll Findings
+2.2 Prolonged Absences & Validation Rule Weaknesses
+The 2025 audit also highlighted 4 officers who remained on the payroll despite being reported absent for over 12 months, accumulating K224,612 in payments. Furthermore, historical findings from 2024 revealed 205 underage records and 108 instances where take-home pay fell below the mandated 40% threshold, illustrating that automated software rules must run consistently during processing runs.
+2.3 Teacher Recruitment & Placement Bottlenecks
+Parliamentary records from 17 March 2026 regarding the July 2025 teacher replacement exercise indicated that of 4,319 recruited teachers, only 2,795 (64.7%) had been placed on the active payroll at that date, leaving 1,524 pending placement (National Assembly, 2026). This highlights significant manual processing backlogs during high-volume recruitments.
+Chapter 2 continues beyond the Zambian audit evidence to review the conceptual and empirical literature that informs the design of the proposed system.
+2.4 Transparency and Accountability in Public Financial Management
+Transparency and accountability are often mentioned together but are conceptually distinct. Bovens (2007) describes accountability as a relationship in which an actor has an obligation to explain and justify conduct to a forum, which can question the actor, pass judgement, and impose consequences. Payroll is a clear example: officers who authorize, verify, and process salaries must be able to justify their actions to supervisors, auditors, and Parliament. In Zambia, the Public Finance Management Act No. 1 of 2018 provides the statutory framework for public finances, and controls over personal-emolument expenditure operate within it (Republic of Zambia, 2018).
+Fox (2007) cautions that transparency does not automatically produce accountability. He distinguishes “soft” accountability, which is answerability through information and justification, from “hard” accountability, which involves sanctions or remedies, and he separates “clear” transparency, which reveals who is responsible and what was decided, from “opaque” transparency, which discloses information without showing responsibility. Meijer (2013) likewise treats transparency as a complex social process rather than a simple release of data, and Hood (2007) notes that greater transparency can encourage blame-avoidance behaviour among officials. The implication for payroll design is that publishing figures is not enough. A system must record who changed what, when, and under whose authority, and it must attach case ownership and deadlines to every exception; these are the features proposed in Chapter 3.
+2.5 Payroll and Financial Management Information Systems in Developing Countries
+Payroll systems form part of the broader family of financial management information systems (FMIS). Diamond and Khemani (2005) reviewed the introduction of FMIS in developing countries and found that results were often below expectations, largely because the systems were treated as technical fixes without the underlying process reform, political commitment, and realistic scoping that they require. The World Bank’s review of 25 years of FMIS experience reaches a similar conclusion: technology is an enabler rather than a substitute for institutional reform, and lasting results depend on government ownership, phased implementation, simple designs, and good-quality data (Dener et al., 2011).
+Heeks (2002) explains many failures of information systems in developing countries through “design–reality gaps”, where the assumptions built into a system differ from the skills, infrastructure, and working practices of the organization that must use it. This is a particular risk for a payroll system that depends on district and school officers entering accurate data. Earlier work on IT-enabled public sector reform and e-government also stresses that benefits such as reduced discretion, faster processing, and greater openness are realized only when the technology is matched to administrative reform (Bhatnagar, 2004; Heeks, 1999, 2006). The World Bank (2016) makes the same point for digital technologies generally, arguing that their benefits depend on “analog complements” such as regulation, skills, and accountable institutions.
+Margetts and Dunleavy (2013) describe a second wave of digital-era governance in which governments re-integrate fragmented functions and redesign administrative processes around digital data. This supports the single-system principle adopted in this report: where human-resource, establishment, and payroll data are held separately and reconciled manually, mismatches are expected, whereas a shared authoritative record reduces the opportunities for them to arise.
+2.6 Ghost Workers, Absenteeism and Payroll Leakage: International Evidence
+The problems seen in the Zambian audit reports are not unique to Zambia. Chaudhury et al. (2006) conducted unannounced visits to schools and health facilities in six developing countries and found that, on average, about one in five teachers and about one in three health workers were absent from their posts. Muralidharan et al. (2017) studied teacher absence in India and estimated its fiscal cost at roughly US$1.5 billion per year, arguing that weak governance and monitoring have a direct and measurable cost to the public purse.
+Reinikka and Svensson (2004) examined a capitation grant in Uganda and found that schools received only a small share of the funds intended for them. They also found that a public information campaign, which let schools and parents see what was being transferred, significantly improved the flow of funds. Together, these studies show that absence from post and leakage of funds are measurable governance problems, and that they respond to better information, monitoring, and local verification. They are consistent with the Zambian findings on officers who could not be accounted for at their stations.
+The literature also supports the due-process position taken in this report. Absence from a workstation has many causes, including approved leave, illness, study, transfer, and delayed record updates, as well as genuine fraud. A system that automatically stopped salaries on the basis of a flag would risk penalizing staff for recording errors. Flags should therefore start an investigation, not end one.
+2.7 Integrated Design, Reconciliation and Continuous Auditing
+Audit reports normally reach Parliament long after the transactions they describe. The 2025 findings discussed in Section 2.1, for example, concern payments made over a prior financial year. Vasarhelyi and Halper (1991) proposed continuous auditing, in which automated tests are applied to transactions as they occur rather than being reviewed once a year. Applied to payroll, the rules that failed in the 2024 audit (age bounds and the 40% net-pay threshold) would run in every payroll cycle, and exceptions would be raised before payment rather than after.
+International auditing standards also emphasize the importance of reliable, traceable evidence. The INTOSAI fundamental principles of public-sector auditing (ISSAI 100) set out the expectations for auditors in the public sector (INTOSAI, 2019), and the OECD Recommendation on Public Integrity highlights risk-based internal control and transparency as parts of an integrity system (OECD, 2017). A payroll platform that keeps a complete, time-stamped history of changes gives internal and external auditors the evidence they need and reduces the time spent on manual reconstruction of records. Reconciliation between human-resource registers and PMEC extracts, as proposed in Section 3.2, supports the same aim by identifying mismatches each month rather than annually.
+2.8 Security, Access Control and Audit Trails
+A payroll system holds sensitive personal and financial data and must therefore be designed with security as a core requirement. Saltzer and Schroeder (1975) set out design principles that remain widely used, including least privilege, under which each user receives only the access needed for their duties. Sandhu et al. (1996) formalized role-based access control (RBAC), in which permissions are assigned to roles and users are assigned to roles. RBAC suits payroll because job functions such as data entry, verification, approval, and audit are clearly defined and can be kept separate, which supports separation of duties.
+Accountability also depends on trustworthy records of what happened. Schneier and Kelsey (1999) describe secure audit logs that are designed so that an attacker, or an insider, cannot undetectably alter earlier entries even after gaining control of the system. This is the principle behind the immutable audit trail proposed in this report. Organizations can structure their security management using ISO/IEC 27001:2022, which sets requirements for an information security management system (ISO/IEC, 2022). Because payroll data identifies individuals and their earnings, it is also personal data, and its processing in Zambia is subject to the Data Protection Act No. 3 of 2021, which makes collection limits, security safeguards, and lawful processing relevant to system design (Republic of Zambia, 2021).
+2.9 Adoption and Success of Public-Sector Information Systems
+Even a well-designed system fails if staff do not use it properly. Davis (1989) showed that perceived usefulness and perceived ease of use are strong predictors of whether users accept information technology. DeLone and McLean (2003) proposed that information system success should be assessed across system quality, information quality, service quality, use, user satisfaction, and net benefits. Heeks (2002) adds that public-sector projects in developing countries commonly fail in whole or in part when these human and organizational factors are neglected.
+These frameworks inform the proposed evaluation of the system. Useful indicators include the share of staff records matched to a verified station, the time taken to resolve flagged cases, the number of open exceptions, and the extent to which district officers complete scheduled verifications. They also support the recommendation to pilot the system in selected districts before national rollout.
+2.10 Summary of the Literature and Research Gap
+The literature establishes three points. First, accountability requires answerability and consequences, not just disclosure (Bovens, 2007; Fox, 2007). Second, international evidence shows that absence from post and leakage of funds are widespread and measurable, and that monitoring and information improve results (Chaudhury et al., 2006; Reinikka & Svensson, 2004). Third, FMIS and e-government experience shows that technology succeeds only with institutional reform, good data, and attention to users (Dener et al., 2011; Diamond & Khemani, 2005; Heeks, 2002).
+Published work that connects these ideas to Zambian audit findings in a single payroll control design that also protects employee due process appears limited. This report addresses that gap by translating the documented PMEC findings into an integrated workflow, architecture, and set of safeguards.
+Table 2.2 summarizes the key works reviewed in this chapter and their relevance to the proposed system.
+Table 2.2: Summary of Key Literature and Relevance to the Proposed System
+Source	Key Insight	Relevance to Proposed System
+Bovens (2007)	Accountability as a relationship of explanation, judgement, and consequences.	Every flagged record has an owner, a reviewer, and a deadline.
+Fox (2007)	Transparency alone does not guarantee accountability; “clear” transparency shows responsibility.	Audit trail records who changed what, when, and why.
+Diamond & Khemani (2005); Dener et al. (2011)	FMIS succeed only with reform, ownership, phased rollout, and good data.	Pilot districts first; standard Staff IDs and monthly returns.
+Heeks (2002)	Design–reality gaps explain many public-sector IS failures.	Simple browser interface for school and district officers.
+Chaudhury et al. (2006); Muralidharan et al. (2017)	Absence from post is widespread and carries a measurable fiscal cost.	Scheduled station verification and absence tracking.
+Reinikka & Svensson (2004)	Information and local monitoring reduce leakage of funds.	Exception dashboards give visibility to supervisors.
+Vasarhelyi & Halper (1991)	Continuous auditing tests transactions as they occur.	Validation rules run in every payroll cycle.
+Sandhu et al. (1996); Schneier & Kelsey (1999)	Role-based access control and tamper-evident logs.	RBAC and immutable audit trail for payroll data.
+Republic of Zambia (2021)	Data Protection Act regulates processing of personal data.	Data minimization and secure handling of staff records.
+CHAPTER 3 – METHODOLOGY & TECHNICAL ARCHITECTURE
+3.1 Proposed 5-Step Digital Control Workflow
+To systematically prevent payroll mismatches, a 5-step digital verification workflow is proposed:
+1.	Register: Maintain a centralized register with unique Staff IDs, station assignments, and employment status.
+2.	Verify: Authorized district officers conduct scheduled physical and digital workstation verifications.
+3.	Validate: Automated rules engines verify records against duplicate check constraints, age bounds, and net-pay rules.
+4.	Review: System flags trigger manual officer investigations to collect evidence before administrative decisions.
+5.	Report: Interactive dashboards monitor open exception cases, turnaround times, and completed actions.
+3.2 Prototype System Architecture
+A prototype architecture built on a Node.js server, relational database, and secure browser interface allows decentralized verification at school and district levels (Figure 3.1).
+The platform incorporates core modules including Transfer Tracking (maintaining historical transfer logs), Reconciliation Engines (comparing active HR registers with PMEC extracts), and Immutable Audit Trails. Verification officers interact with the system through a secure browser interface, while the automated validation engine and exception dashboard support the Validate, Review, and Report steps of the workflow in Section 3.1.
+ 
+Figure 3.1: Prototype Technical Architecture & Module Data Flow
+3.3 Automated Validation Rules
+The Validate step applies a set of rules to every record in each payroll cycle. Each rule answers a control weakness documented in Chapter 2. A failed rule creates a case for review; it never stops a salary automatically (Table 3.1).
+Table 3.1: Proposed Automated Validation Rules
+Rule	Check Performed	Audit Finding Addressed
+Unique identity	One Staff ID per person; duplicate IDs, national registration numbers, or bank accounts are flagged.	Duplicate and ghost entries (Section 2.1)
+Age bounds	Date of birth must give an age within the permitted employment range.	205 underage entries (2024)
+Net-pay threshold	Take-home pay must not fall below 40% of pay.	108 threshold breaches (2024)
+Station match	Each active employee is linked to an approved post and a verified station.	125 officers unaccounted for (2025)
+Absence tracking	Absence beyond a set period raises a case until the status is updated.	4 officers absent > 12 months (2025)
+Placement ageing	Recruits not placed on the payroll within a set period are listed for follow-up.	1,524 teachers pending (2026)
+3.4 Roles and Access Control
+Access follows the least-privilege and separation-of-duties principles reviewed in Section 2.8. Each role sees and changes only what its duties require, and no one can approve a case that they raised themselves (Table 3.2).
+Table 3.2: Proposed User Roles and Permissions
+Role	Main Permissions	Key Restriction
+Station officer	Enters and updates station returns and staff status.	Own station only
+District verifier	Records physical and digital verification results and evidence.	Cannot approve own cases
+Case reviewer	Investigates flagged cases and records the resolution.	Cannot change pay data
+Payroll officer	Applies approved changes to payroll records.	Approved cases only
+Auditor	Reads records, cases, and the audit trail.	Read-only access
+System administrator	Manages user accounts and roles.	No approval of payroll changes
+3.5 Operating Cycle and Implementation Considerations
+The system runs on a monthly cycle aligned with payroll processing. Stations submit digital returns, the reconciliation engine compares the HR register with the PMEC extract, the validation rules run on the combined data, and flagged records are routed to case reviewers with a resolution deadline. Dashboards then report open cases, turnaround times, and completed actions to district, provincial, and national supervisors.
+Because many schools have limited connectivity, the browser interface should be lightweight and tolerate slow connections, with district offices acting as the main points of data entry where school access is unreliable. Training for station and district officers is essential, since design–reality gaps and low user acceptance are leading causes of failure (Davis, 1989; Heeks, 2002).
+Existing records should be cleaned and matched to unique Staff IDs before go-live; otherwise poor-quality legacy data would be carried into the new system (Dener et al., 2011).
+CHAPTER 4 – RESULTS & DISCUSSION
+Analysis indicates that payroll discrepancies in Zambia stem primarily from record mismatches between local station returns and central database entries, delayed multi-step recruitment approvals, and high manual workloads during recruitment drives. Addressing these requires combining technical validation with strict governance safeguards.
+4.1 Risk Analysis & Systemic Gaps
+The documented findings in Chapter 2 map onto three systemic gaps. First, record mismatches between station returns and central entries are consistent with the 125 officers who could not be accounted for across 24 stations and the 4 officers who remained on the payroll after more than 12 months of reported absence. Second, delayed multi-step approvals are reflected in the 1,524 of 4,319 recruited teachers (35.3%) still pending placement on the payroll at 17 March 2026. Third, high manual workloads during recruitment drives are consistent with the 205 underage entries and 108 net-pay threshold breaches recorded in the 2024 audit, which PMEC attributed to human error (News Diggers, 2025).
+These findings describe control weaknesses in record-keeping and verification. An officer who cannot be accounted for at a workstation is a verification outcome that requires investigation; it is not by itself a determination of wrongdoing. The proposed workflow in Section 3.1 is designed accordingly.
+4.2 Security, Fairness & Data Protection
+The proposed controls are designed so that technology supports, rather than replaces, administrative judgement. A flag raised by the validation engine opens a case for manual investigation and evidence collection; it does not trigger an automatic salary stoppage. This protects employee due process and reduces the risk of penalizing staff for data-entry or reporting errors.
+Role-based access control limits each user to the records and actions their duties require, and an immutable audit trail records who viewed or changed a record and when. Every flagged mismatch is assigned a case number, a reviewer, and a resolution deadline so that cases remain traceable. Because the platform holds personal and salary information, it should collect only the data needed for verification and should be operated in line with applicable Zambian data protection requirements.
+CHAPTER 5 – CONCLUSION & RECOMMENDATIONS
+Digital technology can substantially strengthen public payroll accuracy and transparency in Zambia. However, software rules must be paired with clear operational ownership, trained personnel, and rigid follow-up procedures.
+No.	Recommendation	Action Required
+1	Standardize Records	Enforce uniform Staff IDs and mandate digital monthly station returns.
+2	Scheduled Verifications	Institute routine multi-level checks across school, district, and national levels.
+3	Action Tracking	Assign every flagged mismatch a case number, reviewer, and resolution deadline.
+4	Pilot Implementation	Test digital control modules in selected pilot districts prior to national rollout.
+Table 4.1: Key Practical Recommendations for System Deployment
+Limitations. This report is a desk-based study that relies on published audit findings and parliamentary records. It does not use access to PMEC data, and the proposed design still has to be tested in pilot districts before conclusions can be drawn about its effect on payroll accuracy. The figures are quoted as reported in the sources, and an officer who could not be accounted for is not by itself evidence of fraud.
+Future work. Further work should pilot the system in selected districts, measure indicators such as the share of records matched to verified stations and the time taken to resolve cases (Section 2.9), and examine integration with national identity and bank data, subject to data protection requirements.
+6. REFERENCES (APA FORMAT)
+1.	Bhatnagar, S. (2004). E-government: From vision to implementation—A practical guide with case studies. SAGE Publications.
+2.	Bovens, M. (2007). Analysing and assessing accountability: A conceptual framework. European Law Journal, 13(4), 447–468.
+3.	Chaudhury, N., Hammer, J., Kremer, M., Muralidharan, K., & Rogers, F. H. (2006). Missing in action: Teacher and health worker absence in developing countries. Journal of Economic Perspectives, 20(1), 91–116.
+4.	Davis, F. D. (1989). Perceived usefulness, perceived ease of use, and user acceptance of information technology. MIS Quarterly, 13(3), 319–340.
+5.	DeLone, W. H., & McLean, E. R. (2003). The DeLone and McLean model of information systems success: A ten-year update. Journal of Management Information Systems, 19(4), 9–30.
+6.	Dener, C., Watkins, J. A., & Dorotinsky, W. L. (2011). Financial management information systems: 25 years of World Bank experience on what works and what doesn’t. World Bank.
+7.	Diamond, J., & Khemani, P. (2005). Introducing financial management information systems in developing countries (IMF Working Paper No. 05/196). International Monetary Fund.
+8.	Fox, J. (2007). The uncertain relationship between transparency and accountability. Development in Practice, 17(4–5), 663–671.
+9.	Heeks, R. (1999). Reinventing government in the information age: International practice in IT-enabled public sector reform. Routledge.
+10.	Heeks, R. (2002). Information systems and developing countries: Failure, success, and local improvisations. The Information Society, 18(2), 101–112.
+11.	Heeks, R. (2006). Implementing and managing eGovernment: An international text. SAGE Publications.
+12.	Hood, C. (2007). What happens when transparency meets blame-avoidance? Public Management Review, 9(2), 191–210.
+13.	INTOSAI. (2019). ISSAI 100: Fundamental principles of public-sector auditing. International Organization of Supreme Audit Institutions.
+14.	ISO/IEC. (2022). ISO/IEC 27001:2022 Information security, cybersecurity and privacy protection—Information security management systems—Requirements. International Organization for Standardization.
+15.	Margetts, H., & Dunleavy, P. (2013). The second wave of digital-era governance: A quasi-paradigm for government on the Web. Philosophical Transactions of the Royal Society A, 371(1987), 20120382.
+16.	Meijer, A. (2013). Understanding the complex dynamics of transparency. Public Administration Review, 73(3), 429–439.
+17.	Ministry of Finance and National Planning. (2026). PMEC Support Department Functions and Structure. Government of the Republic of Zambia. [Link]
+18.	Muralidharan, K., Das, J., Holla, A., & Mohpal, A. (2017). The fiscal cost of weak governance: Evidence from teacher absence in India. Journal of Public Economics, 145, 116–135.
+19.	National Assembly of Zambia. (2026, March 17). Parliamentary record: Progress on placement of teachers recruited in 2025 on the payroll. Parliament Buildings, Lusaka. [Link]
+20.	News Diggers. (2025, November 14). PMEC attributes placement of underage persons on payroll to human error. News Diggers Media Limited. [Link]
+21.	News Diggers. (2026, October 26). MoE paid over K1.2m to 125 ghost workers – Auditor General Report. News Diggers Media Limited. [Link]
+22.	OECD. (2017). OECD recommendation of the Council on public integrity. OECD Publishing.
+23.	Office of the Auditor General. (2025). Report of the Auditor General for the financial year ended 31 December 2024. Government of the Republic of Zambia. [Link]
+24.	Office of the Auditor General. (2026, October). Auditor General’s 2025 Main Report on Public Accounts exposes weaknesses and calls for greater accountability in MPSAs. Stand 7951, Haile Selassie Avenue, Lusaka. [Link]
+25.	Reinikka, R., & Svensson, J. (2004). Local capture: Evidence from a central government transfer program in Uganda. The Quarterly Journal of Economics, 119(2), 679–705.
+26.	Republic of Zambia. (2018). Public Finance Management Act No. 1 of 2018. Government Printer.
+27.	Republic of Zambia. (2021). Data Protection Act No. 3 of 2021. Government Printer.
+28.	Saltzer, J. H., & Schroeder, M. D. (1975). The protection of information in computer systems. Proceedings of the IEEE, 63(9), 1278–1308.
+29.	Sandhu, R. S., Coyne, E. J., Feinstein, H. L., & Youman, C. E. (1996). Role-based access control models. IEEE Computer, 29(2), 38–47.
+30.	Schneier, B., & Kelsey, J. (1999). Secure audit logs to support computer forensics. ACM Transactions on Information and System Security, 2(2), 159–176.
+31.	Vasarhelyi, M. A., & Halper, F. B. (1991). The continuous audit of online systems. Auditing: A Journal of Practice & Theory, 10(1), 110–125.
+32.	World Bank. (2016). World development report 2016: Digital dividends. World Bank.
+33.	Zambia National Broadcasting Corporation (ZNBC). (2026, October). Auditor General flags audit weaknesses in public payroll management. ZNBC News. [Link]

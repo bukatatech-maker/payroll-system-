@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { CheckCircle2, FileSearch, ShieldCheck } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, FileSearch, ShieldCheck, X } from 'lucide-react';
 import { api } from '../lib/api.ts';
 import { formatShortDate, formatZmw } from '../lib/roles.ts';
 import type { ExceptionCase, UserAccount } from '../types/payroll.ts';
@@ -7,6 +7,7 @@ import type { ExceptionCase, UserAccount } from '../types/payroll.ts';
 interface CasesReviewViewProps {
   currentUser: UserAccount;
   cases: ExceptionCase[];
+  focusedStaff?: { staffId: string; nonce: number } | null;
   onRefresh: () => Promise<void>;
   onNotify: (type: 'success' | 'error', message: string) => void;
 }
@@ -14,15 +15,24 @@ interface CasesReviewViewProps {
 export function CasesReviewView({
   currentUser,
   cases,
+  focusedStaff,
   onRefresh,
   onNotify,
 }: CasesReviewViewProps) {
   const [statusFilter, setStatusFilter] = useState<'open' | 'resolved' | 'applied' | 'all'>('open');
+  const [staffFilter, setStaffFilter] = useState<string>('');
   const [activeCase, setActiveCase] = useState<ExceptionCase | null>(null);
   const [decision, setDecision] = useState('Cleared - Verified Present');
   const [evidenceRef, setEvidenceRef] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (focusedStaff?.staffId) {
+      setStatusFilter('all');
+      setStaffFilter(focusedStaff.staffId);
+    }
+  }, [focusedStaff]);
 
   const counts = useMemo(() => {
     return {
@@ -35,12 +45,13 @@ export function CasesReviewView({
 
   const filteredCases = useMemo(() => {
     return cases.filter((c) => {
+      if (staffFilter && c.staff_id !== staffFilter) return false;
       if (statusFilter === 'open') return c.status === 'Open' || c.status === 'Under Investigation';
       if (statusFilter === 'resolved') return c.status === 'Resolved';
       if (statusFilter === 'applied') return c.status === 'Applied to Payroll';
       return true;
     });
-  }, [cases, statusFilter]);
+  }, [cases, statusFilter, staffFilter]);
 
   function openInvestigateModal(c: ExceptionCase) {
     setActiveCase(c);
@@ -106,43 +117,55 @@ export function CasesReviewView({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1 rounded-lg bg-slate-100 p-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => setStatusFilter('open')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
-              statusFilter === 'open' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Open ({counts.open})
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter('resolved')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
-              statusFilter === 'resolved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Awaiting Payroll ({counts.resolved})
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter('applied')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
-              statusFilter === 'applied' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            Completed ({counts.applied})
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter('all')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
-              statusFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-            }`}
-          >
-            All ({counts.all})
-          </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {staffFilter && (
+            <button
+              type="button"
+              onClick={() => setStaffFilter('')}
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 font-mono text-xs text-slate-700 hover:bg-slate-50"
+            >
+              <span>Staff: {staffFilter}</span>
+              <X className="h-3 w-3" />
+            </button>
+          )}
+          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('open')}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                statusFilter === 'open' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              Open ({counts.open})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('resolved')}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                statusFilter === 'resolved' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              Awaiting Payroll ({counts.resolved})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('applied')}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                statusFilter === 'applied' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              Completed ({counts.applied})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                statusFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              All ({counts.all})
+            </button>
+          </div>
         </div>
       </div>
 

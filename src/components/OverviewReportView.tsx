@@ -1,9 +1,20 @@
 import { useState } from 'react';
-import { ArrowRight, Calendar, Download, ShieldCheck } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  Award,
+  Calendar,
+  CheckCircle2,
+  Download,
+  FileText,
+  ShieldCheck,
+} from 'lucide-react';
 import { exportOverviewPdfReport } from '../lib/exportPdfReport.ts';
 import { formatZmw } from '../lib/roles.ts';
 import type { DashboardSummary } from '../types/payroll.ts';
 import { MonthlyTrendsChart } from './MonthlyTrendsChart.tsx';
+import { RegionalAnomaliesHeatmap } from './RegionalAnomaliesHeatmap.tsx';
+import { TechnicalReportModal } from './TechnicalReportModal.tsx';
 
 export type NavTab =
   | 'overview'
@@ -44,6 +55,7 @@ export function OverviewReportView({
   onNotify,
 }: OverviewReportViewProps) {
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   async function handleExportPdf() {
     if (!data) return;
@@ -276,6 +288,16 @@ export function OverviewReportView({
 
           <button
             type="button"
+            onClick={() => setShowReportModal(true)}
+            disabled={!data}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap shrink-0"
+          >
+            <FileText className="h-3.5 w-3.5 text-emerald-700" />
+            <span>Seminar Report &amp; Fig. 3.1</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleExportPdf}
             disabled={exportingPdf || !data}
             className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap shrink-0"
@@ -463,8 +485,248 @@ export function OverviewReportView({
         </button>
       </div>
 
+      {/* Urgent Payroll Alerts Card (Stations exceeding +10% variance spike) */}
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              {(data.urgent_payroll_alerts?.length ?? 0) > 0 ? (
+                <AlertTriangle className="h-4 w-4 shrink-0 text-red-700" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700" />
+              )}
+              <h2 className="font-display text-sm font-semibold text-slate-900">
+                Urgent Payroll Alerts
+              </h2>
+              <span className="font-mono text-xs text-slate-500 tabular-nums">
+                · {data.urgent_payroll_alerts?.length ?? 0}{' '}
+                {(data.urgent_payroll_alerts?.length ?? 0) === 1 ? 'station' : 'stations'} &gt; +10% spike
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Stations with month-over-month flagged variance spikes exceeding 10% in the selected reporting period (triggers case review without salary stoppage).
+            </p>
+          </div>
+          {(data.urgent_payroll_alerts?.length ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => onNavigate('review')}
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 whitespace-nowrap shrink-0"
+            >
+              <span>Inspect Flagged Cases</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {!data.urgent_payroll_alerts || data.urgent_payroll_alerts.length === 0 ? (
+          <div className="flex items-center gap-3 px-6 py-5 text-xs text-slate-600">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700" />
+            <span>
+              No stations exceed the +10% variance threshold in the selected reporting period ({data.period.start_month} to {data.period.end_month}).
+            </span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                  <th className="px-6 py-3 font-medium">Station &amp; District</th>
+                  <th className="px-4 py-3 text-right font-medium">Prior Baseline</th>
+                  <th className="px-4 py-3 text-right font-medium">Current Variance</th>
+                  <th className="px-4 py-3 text-right font-medium">Variance Spike</th>
+                  <th className="px-4 py-3 text-right font-medium">Open Cases</th>
+                  <th className="px-6 py-3 text-right font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {data.urgent_payroll_alerts.map((alert) => (
+                  <tr key={alert.station_id} className="hover:bg-slate-50">
+                    <td className="px-6 py-3.5">
+                      <div className="font-medium text-slate-900">{alert.station_name}</div>
+                      <div className="mt-0.5 font-mono text-slate-500">
+                        {alert.station_code} · {alert.district}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono text-slate-600 tabular-nums">
+                      <div>{formatZmw(alert.baseline_variance_zmw)}</div>
+                      <div className="text-slate-400">{alert.baseline_month}</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono font-medium text-slate-900 tabular-nums">
+                      <div>{formatZmw(alert.current_variance_zmw)}</div>
+                      <div className="text-slate-500">{alert.current_month}</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono tabular-nums">
+                      <div className="font-semibold text-red-700">
+                        +{alert.spike_pct.toFixed(1)}% spike
+                      </div>
+                      <div className="text-slate-500">
+                        +{formatZmw(alert.variance_delta_zmw)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono tabular-nums">
+                      <span className="font-semibold text-amber-700">
+                        {alert.open_cases_count}
+                      </span>{' '}
+                      <span className="text-slate-500">
+                        {alert.open_cases_count === 1 ? 'case' : 'cases'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onNavigate('review')}
+                        className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:text-emerald-800 whitespace-nowrap"
+                      >
+                        <span>Review</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       {/* 6-Month D3 Trend Line Chart: Payroll Variances & Exception Cases */}
       <MonthlyTrendsChart data={data.monthly_trends ?? []} />
+
+      {/* Regional Payroll Anomalies Heatmap (Geographic Hotspots by District & Control Rule) */}
+      <RegionalAnomaliesHeatmap
+        rows={data.regional_anomalies ?? []}
+        period={data.period}
+        onNavigate={onNavigate}
+      />
+
+      {/* Top Performance Card (Station Ranking by Validation Completion Rate) */}
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4 shrink-0 text-emerald-700" />
+              <h2 className="font-display text-sm font-semibold text-slate-900">
+                Top Performance
+              </h2>
+              <span className="font-mono text-xs text-slate-500 tabular-nums">
+                · {data.top_performing_stations?.length ?? 0} pilot stations ranked
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Stations ranked by validation completion rate across workstation verifications, monthly return submissions, and exception case clearance.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('verify')}
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 whitespace-nowrap shrink-0"
+          >
+            <span>Log Station Verification</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                <th className="w-16 px-6 py-3 font-medium">Rank</th>
+                <th className="px-4 py-3 font-medium">Station &amp; District</th>
+                <th className="px-4 py-3 text-right font-medium">Workstation Checks</th>
+                <th className="px-4 py-3 text-right font-medium">Open Cases</th>
+                <th className="px-4 py-3 font-medium">Monthly Return</th>
+                <th className="w-56 px-4 py-3 font-medium">Completion Rate</th>
+                <th className="px-6 py-3 text-right font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {(data.top_performing_stations ?? []).map((stn) => {
+                const isTop = stn.validation_completion_rate >= 75;
+                const isMid = stn.validation_completion_rate >= 50;
+                return (
+                  <tr key={stn.station_id} className="hover:bg-slate-50">
+                    <td className="px-6 py-3.5 font-mono font-semibold text-slate-700 tabular-nums">
+                      #{String(stn.rank).padStart(2, '0')}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="font-medium text-slate-900">{stn.station_name}</div>
+                      <div className="mt-0.5 font-mono text-slate-500">
+                        {stn.station_code} · {stn.district}, {stn.province}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono text-slate-800 tabular-nums">
+                      {stn.verified_staff}/{stn.total_staff} verified
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono tabular-nums">
+                      <span
+                        className={
+                          stn.open_cases > 0
+                            ? 'font-semibold text-amber-700'
+                            : 'font-medium text-emerald-700'
+                        }
+                      >
+                        {stn.open_cases}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={
+                          stn.return_submitted
+                            ? 'font-medium text-emerald-700'
+                            : 'font-medium text-amber-700'
+                        }
+                      >
+                        {stn.return_submitted ? 'Submitted' : 'Overdue'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 flex-1 overflow-hidden rounded-sm bg-slate-100">
+                          <div
+                            style={{ width: `${Math.min(100, stn.validation_completion_rate)}%` }}
+                            className={`h-full transition-all ${
+                              isTop
+                                ? 'bg-emerald-700'
+                                : isMid
+                                  ? 'bg-amber-600'
+                                  : 'bg-red-600'
+                            }`}
+                          />
+                        </div>
+                        <span
+                          className={`w-14 text-right font-mono font-semibold tabular-nums ${
+                            isTop
+                              ? 'text-emerald-700'
+                              : isMid
+                                ? 'text-amber-700'
+                                : 'text-red-700'
+                          }`}
+                        >
+                          {stn.validation_completion_rate.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="mt-0.5 font-mono text-[11px] text-slate-500 tabular-nums">
+                        {stn.completed_checks}/{stn.total_checks} control checks cleared
+                      </div>
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onNavigate(stn.open_cases > 0 ? 'review' : 'register')}
+                        className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:text-emerald-800 whitespace-nowrap"
+                      >
+                        <span>{stn.open_cases > 0 ? 'Clear Cases' : 'Register'}</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* Two-Column Breakdown: Automated Rules vs Audit Findings & Pilot District Coverage */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -572,6 +834,13 @@ export function OverviewReportView({
           </div>
         </section>
       </div>
+
+      <TechnicalReportModal
+        open={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        data={data}
+        onNotify={onNotify}
+      />
     </div>
   );
 }

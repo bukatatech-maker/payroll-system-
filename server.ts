@@ -8,6 +8,7 @@ import {
   appendAuditLog,
   db,
   ensureMonthlyTrendsSeeded,
+  ensureStationBaselinesSeeded,
   initSchema,
   seedInitialDataIfEmpty,
   verifyAuditChain,
@@ -26,6 +27,7 @@ const SESSION_SECRET =
 initSchema();
 seedInitialDataIfEmpty();
 ensureMonthlyTrendsSeeded();
+ensureStationBaselinesSeeded();
 
 // Ensure initial validation cases exist on first boot
 const initialCasesCount = db
@@ -411,6 +413,377 @@ app.get('/api/dashboard', requireAuth, (req, res) => {
       ? Number(((periodVerifiedCount / empStats.total_staff) * 100).toFixed(1))
       : verifiedPct;
 
+  const comparisonMonth = includesCurrentMonth ? '2026-11' : endMonth;
+  const [compYearStr, compMonthStr] = comparisonMonth.split('-');
+  const compYear = Number(compYearStr);
+  const compMonthNum = Number(compMonthStr);
+  const priorMonth =
+    compMonthNum === 1
+      ? `${compYear - 1}-12`
+      : `${compYear}-${String(compMonthNum - 1).padStart(2, '0')}`;
+
+  const stationRows = db
+    .prepare(`
+      SELECT
+        s.id AS station_id,
+        s.code AS station_code,
+        s.name AS station_name,
+        s.district,
+        COALESCE(SUM(CASE WHEN e.payroll_placed = 1 THEN e.gross_pay ELSE 0 END), 0) AS gross_pay_zmw
+      FROM stations s
+      LEFT JOIN employees e ON e.station_id = s.id
+      GROUP BY s.id
+      ORDER BY s.name ASC
+    `)
+    .all() as Array<{
+    station_id: string;
+    station_code: string;
+    station_name: string;
+    district: string;
+    gross_pay_zmw: number;
+  }>;
+
+  const liveStationExposures = db
+    .prepare(`
+      SELECT
+        station_id,
+        COUNT(*) AS open_cases_count,
+        COALESCE(SUM(financial_exposure), 0) AS exposure_zmw
+      FROM exception_cases
+      WHERE status IN ('Open', 'Under Investigation')
+      GROUP BY station_id
+    `)
+    .all() as Array<{
+    station_id: string;
+    open_cases_count: number;
+    exposure_zmw: number;
+  }>;
+  const liveStationMap = new Map(liveStationExposures.map((r) => [r.station_id, r]));
+
+  const baselineRows = db
+    .prepare(`
+      SELECT station_id, month, variance_zmw, open_cases_count
+      FROM station_variance_baselines
+      WHERE month IN (?, ?)
+    `)
+    .all(priorMonth, comparisonMonth) as Array<{
+    station_id: string;
+    month: string;
+    variance_zmw: number;
+    open_cases_count: number;
+  }>;
+
+  const priorBaselineMap = new Map<string, { variance_zmw: number; open_cases_count: number }>();
+  const currentSnapshotMap = new Map<string, { variance_zmw: number; open_cases_count: number }>();
+  for (const b of baselineRows) {
+    if (b.month === priorMonth) {
+      priorBaselineMap.set(b.station_id, {
+        variance_zmw: b.variance_zmw,
+        open_cases_count: b.open_cases_count,
+      });
+    }
+    if (b.month === comparisonMonth) {
+      currentSnapshotMap.set(b.station_id, {
+        variance_zmw: b.variance_zmw,
+        open_cases_count: b.open_cases_count,
+      });
+    }
+  }
+
+  const urgentPayrollAlerts = stationRows
+    .map((stn) => {
+      const prior = priorBaselineMap.get(stn.station_id)?.variance_zmw ?? 0;
+      const live = liveStationMap.get(stn.station_id);
+      const snapshot = currentSnapshotMap.get(stn.station_id);
+
+      const currentVariance = includesCurrentMonth
+        ? (live?.exposure_zmw ?? 0)
+        : (snapshot?.variance_zmw ?? 0);
+      const openCasesCount = includesCurrentMonth
+        ? (live?.open_cases_count ?? 0)
+        : (snapshot?.open_cases_count ?? 0);
+
+      let spikePct = 0;
+      if (prior > 0) {
+        spikePct = ((currentVariance - prior) / prior) * 100;
+      } else if (currentVariance > 0) {
+        spikePct = 100;
+      }
+
+      return {
+        station_id: stn.station_id,
+        station_code: stn.station_code,
+        station_name: stn.station_name,
+        district: stn.district,
+        baseline_month: priorMonth,
+        current_month: comparisonMonth,
+        baseline_variance_zmw: prior,
+        current_variance_zmw: currentVariance,
+        variance_delta_zmw: currentVariance - prior,
+        spike_pct: Number(spikePct.toFixed(1)),
+        open_cases_count: openCasesCount,
+        gross_pay_zmw: stn.gross_pay_zmw,
+      };
+    })
+    .filter((alert) => alert.current_variance_zmw > 0 && alert.spike_pct > 10)
+    .sort((a, b) => b.spike_pct - a.spike_pct);
+
+  // Regional Payroll Anomalies Heatmap (District/Province x Validation Rule)
+  const ruleShortLabels: Array<{ code: string; shortLabel: string }> = [
+    { code: 'absence_tracking', shortLabel: 'Absence' },
+    { code: 'station_match', shortLabel: 'Station Match' },
+    { code: 'unique_identity', shortLabel: 'Identity / Bank' },
+    { code: 'placement_ageing', shortLabel: 'Placement' },
+    { code: 'net_pay_threshold', shortLabel: 'Net Pay <40%' },
+    { code: 'age_bounds', shortLabel: 'Age Bounds' },
+  ];
+
+  const districtMetaRows = db
+    .prepare(`
+      SELECT
+        s.district,
+        MIN(s.province) AS province,
+        COUNT(DISTINCT s.id) AS station_count,
+        COUNT(DISTINCT e.id) AS staff_count
+      FROM stations s
+      LEFT JOIN employees e ON e.station_id = s.id
+      GROUP BY s.district
+      ORDER BY s.district ASC
+    `)
+    .all() as Array<{
+    district: string;
+    province: string;
+    station_count: number;
+    staff_count: number;
+  }>;
+
+  const liveDistrictRuleRows = db
+    .prepare(`
+      SELECT
+        district,
+        rule_code,
+        COUNT(*) AS cnt,
+        COALESCE(SUM(financial_exposure), 0) AS exposure_zmw
+      FROM exception_cases
+      WHERE status IN ('Open', 'Under Investigation')
+      GROUP BY district, rule_code
+    `)
+    .all() as Array<{
+    district: string;
+    rule_code: string;
+    cnt: number;
+    exposure_zmw: number;
+  }>;
+
+  const liveCellMap = new Map<string, { count: number; exposure: number }>();
+  for (const r of liveDistrictRuleRows) {
+    liveCellMap.set(`${r.district}::${r.rule_code}`, {
+      count: r.cnt,
+      exposure: r.exposure_zmw,
+    });
+  }
+
+  const districtSnapshotRows = db
+    .prepare(`
+      SELECT
+        s.district,
+        COALESCE(SUM(b.variance_zmw), 0) AS exposure_zmw,
+        COALESCE(SUM(b.open_cases_count), 0) AS open_cases_count
+      FROM stations s
+      LEFT JOIN station_variance_baselines b
+        ON b.station_id = s.id AND b.month = ?
+      GROUP BY s.district
+    `)
+    .all(comparisonMonth) as Array<{
+    district: string;
+    exposure_zmw: number;
+    open_cases_count: number;
+  }>;
+  const districtSnapshotMap = new Map(districtSnapshotRows.map((d) => [d.district, d]));
+
+  const regionalAnomalies = districtMetaRows
+    .map((meta) => {
+      if (includesCurrentMonth) {
+        const cells = ruleShortLabels.map((rl) => {
+          const hit = liveCellMap.get(`${meta.district}::${rl.code}`);
+          return {
+            rule_code: rl.code,
+            rule_short_label: rl.shortLabel,
+            count: hit?.count ?? 0,
+            exposure_zmw: hit?.exposure ?? 0,
+          };
+        });
+        const totalCases = cells.reduce((sum, c) => sum + c.count, 0);
+        const totalExposure = cells.reduce((sum, c) => sum + c.exposure_zmw, 0);
+        const priorityTier =
+          totalExposure >= 100000 || totalCases >= 4
+            ? 'Critical'
+            : totalExposure >= 40000 || totalCases >= 3
+              ? 'High'
+              : totalCases >= 1
+                ? 'Moderate'
+                : 'Nominal';
+
+        return {
+          district: meta.district,
+          province: meta.province,
+          station_count: meta.station_count,
+          staff_count: meta.staff_count,
+          total_cases: totalCases,
+          total_exposure_zmw: totalExposure,
+          priority_tier: priorityTier,
+          cells,
+        };
+      }
+
+      // Historical period scaling from station_variance_baselines
+      const snap = districtSnapshotMap.get(meta.district);
+      const snapExposure = snap?.exposure_zmw ?? 0;
+      const snapCases = snap?.open_cases_count ?? 0;
+      const liveDistrictCells = ruleShortLabels.map((rl) => {
+        const hit = liveCellMap.get(`${meta.district}::${rl.code}`);
+        return {
+          code: rl.code,
+          shortLabel: rl.shortLabel,
+          count: hit?.count ?? 0,
+          exposure: hit?.exposure ?? 0,
+        };
+      });
+      const liveExpSum = liveDistrictCells.reduce((s, c) => s + c.exposure, 0);
+
+      const cells = liveDistrictCells.map((c, idx) => {
+        if (snapExposure <= 0 || snapCases <= 0) {
+          return {
+            rule_code: c.code,
+            rule_short_label: c.shortLabel,
+            count: 0,
+            exposure_zmw: 0,
+          };
+        }
+        if (liveExpSum > 0) {
+          const share = c.exposure / liveExpSum;
+          return {
+            rule_code: c.code,
+            rule_short_label: c.shortLabel,
+            count: c.count > 0 ? Math.max(1, Math.round(snapCases * (c.count / Math.max(1, liveDistrictCells.reduce((s, x) => s + x.count, 0))))) : 0,
+            exposure_zmw: Math.round(snapExposure * share),
+          };
+        }
+        return {
+          rule_code: c.code,
+          rule_short_label: c.shortLabel,
+          count: idx === 1 ? snapCases : 0,
+          exposure_zmw: idx === 1 ? snapExposure : 0,
+        };
+      });
+
+      const totalExposure = cells.reduce((s, c) => s + c.exposure_zmw, 0);
+      const totalCases = cells.reduce((s, c) => s + c.count, 0);
+      const priorityTier =
+        totalExposure >= 100000 || totalCases >= 4
+          ? 'Critical'
+          : totalExposure >= 40000 || totalCases >= 3
+            ? 'High'
+            : totalCases >= 1
+              ? 'Moderate'
+              : 'Nominal';
+
+      return {
+        district: meta.district,
+        province: meta.province,
+        station_count: meta.station_count,
+        staff_count: meta.staff_count,
+        total_cases: totalCases,
+        total_exposure_zmw: totalExposure,
+        priority_tier: priorityTier,
+        cells,
+      };
+    })
+    .sort((a, b) => b.total_exposure_zmw - a.total_exposure_zmw || b.total_cases - a.total_cases);
+
+  // Top Performance Stations (Ranked by Validation Completion Rate)
+  const stationPerfRows = db
+    .prepare(`
+      SELECT
+        s.id AS station_id,
+        s.code AS station_code,
+        s.name AS station_name,
+        s.district,
+        s.province,
+        s.last_return_month,
+        COUNT(e.id) AS total_staff,
+        SUM(CASE WHEN e.last_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS verified_staff,
+        (
+          SELECT COUNT(*)
+          FROM exception_cases c
+          WHERE c.station_id = s.id AND c.status IN ('Open', 'Under Investigation')
+        ) AS live_open_cases,
+        (
+          SELECT COUNT(*)
+          FROM exception_cases c
+          WHERE c.station_id = s.id AND c.status IN ('Resolved', 'Applied to Payroll')
+        ) AS live_resolved_cases
+      FROM stations s
+      LEFT JOIN employees e ON e.station_id = s.id
+      GROUP BY s.id
+    `)
+    .all() as Array<{
+    station_id: string;
+    station_code: string;
+    station_name: string;
+    district: string;
+    province: string;
+    last_return_month: string | null;
+    total_staff: number;
+    verified_staff: number;
+    live_open_cases: number;
+    live_resolved_cases: number;
+  }>;
+
+  const topPerformingStations = stationPerfRows
+    .map((stn) => {
+      const snapOpen = currentSnapshotMap.get(stn.station_id)?.open_cases_count ?? 0;
+      const openCases = includesCurrentMonth ? stn.live_open_cases : snapOpen;
+      const resolvedCases = includesCurrentMonth ? stn.live_resolved_cases : 0;
+      const returnSubmitted = includesCurrentMonth
+        ? Boolean(stn.last_return_month && stn.last_return_month >= comparisonMonth)
+        : true;
+      const verifiedStaff = includesCurrentMonth
+        ? stn.verified_staff
+        : Math.max(0, stn.total_staff - Math.min(stn.total_staff, Math.round(openCases * 0.35)));
+
+      const totalChecks = stn.total_staff + openCases + resolvedCases + 1;
+      const completedChecks = verifiedStaff + resolvedCases + (returnSubmitted ? 1 : 0);
+      const completionRate =
+        totalChecks > 0 ? Number(((completedChecks / totalChecks) * 100).toFixed(1)) : 0;
+
+      return {
+        station_id: stn.station_id,
+        station_code: stn.station_code,
+        station_name: stn.station_name,
+        district: stn.district,
+        province: stn.province,
+        total_staff: stn.total_staff,
+        verified_staff: verifiedStaff,
+        open_cases: openCases,
+        resolved_cases: resolvedCases,
+        return_submitted: returnSubmitted,
+        completed_checks: completedChecks,
+        total_checks: totalChecks,
+        validation_completion_rate: completionRate,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.validation_completion_rate - a.validation_completion_rate ||
+        a.open_cases - b.open_cases ||
+        b.total_staff - a.total_staff
+    )
+    .map((item, idx) => ({
+      rank: idx + 1,
+      ...item,
+    }));
+
   res.json({
     total_staff: empStats.total_staff,
     active_on_payroll: empStats.active_on_payroll,
@@ -446,6 +819,9 @@ app.get('/api/dashboard', requireAuth, (req, res) => {
       end_month: endMonth,
     },
     monthly_trends: filteredTrends,
+    urgent_payroll_alerts: urgentPayrollAlerts,
+    regional_anomalies: regionalAnomalies,
+    top_performing_stations: topPerformingStations,
   });
 });
 
@@ -494,6 +870,104 @@ app.get('/api/employees', requireAuth, (_req, res) => {
     `)
     .all();
   res.json({ employees, transfers, returns });
+});
+
+app.get('/api/employees/search', requireAuth, (req, res) => {
+  const rawQuery = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  if (!rawQuery) {
+    res.json({ results: [] });
+    return;
+  }
+
+  const pattern = `%${rawQuery.toLowerCase()}%`;
+
+  const registerMatches = db
+    .prepare(`
+      SELECT
+        e.staff_id,
+        e.full_name,
+        e.nrc_number,
+        e.station_id,
+        s.code AS station_code,
+        s.name AS station_name,
+        s.district,
+        p.post_code,
+        p.title AS post_title,
+        e.employment_status,
+        e.gross_pay,
+        e.net_pay,
+        e.last_verification_outcome,
+        (
+          SELECT COUNT(*)
+          FROM exception_cases c
+          WHERE c.staff_id = e.staff_id AND c.status IN ('Open', 'Under Investigation')
+        ) AS open_cases_count,
+        'register' AS source
+      FROM employees e
+      JOIN stations s ON s.id = e.station_id
+      JOIN approved_posts p ON p.id = e.post_id
+      WHERE LOWER(e.staff_id) LIKE ?
+         OR LOWER(e.full_name) LIKE ?
+         OR LOWER(e.nrc_number) LIKE ?
+         OR LOWER(s.name) LIKE ?
+         OR LOWER(s.code) LIKE ?
+      ORDER BY
+        CASE WHEN LOWER(e.staff_id) = LOWER(?) THEN 0
+             WHEN LOWER(e.staff_id) LIKE LOWER(?) THEN 1
+             WHEN LOWER(e.full_name) LIKE LOWER(?) THEN 2
+             ELSE 3 END,
+        e.staff_id ASC
+      LIMIT 12
+    `)
+    .all(
+      pattern,
+      pattern,
+      pattern,
+      pattern,
+      pattern,
+      rawQuery,
+      `${rawQuery}%`,
+      `${rawQuery}%`
+    ) as Array<Record<string, unknown>>;
+
+  const pmecUnmatched = db
+    .prepare(`
+      SELECT
+        pm.staff_id,
+        pm.full_name,
+        NULL AS nrc_number,
+        s.id AS station_id,
+        pm.pmec_station_code AS station_code,
+        COALESCE(s.name, 'PMEC Only (' || pm.pmec_station_code || ')') AS station_name,
+        COALESCE(s.district, 'Unmatched PMEC') AS district,
+        pm.pmec_post_code AS post_code,
+        NULL AS post_title,
+        'Unmatched in HR (PMEC Only)' AS employment_status,
+        pm.pmec_gross_pay AS gross_pay,
+        pm.pmec_net_pay AS net_pay,
+        NULL AS last_verification_outcome,
+        (
+          SELECT COUNT(*)
+          FROM exception_cases c
+          WHERE c.staff_id = pm.staff_id AND c.status IN ('Open', 'Under Investigation')
+        ) AS open_cases_count,
+        'pmec_unmatched' AS source
+      FROM pmec_extracts pm
+      LEFT JOIN employees e ON e.staff_id = pm.staff_id
+      LEFT JOIN stations s ON s.code = pm.pmec_station_code
+      WHERE e.staff_id IS NULL
+        AND (
+          LOWER(pm.staff_id) LIKE ?
+          OR LOWER(pm.full_name) LIKE ?
+          OR LOWER(pm.pmec_station_code) LIKE ?
+        )
+      LIMIT 5
+    `)
+    .all(pattern, pattern, pattern) as Array<Record<string, unknown>>;
+
+  res.json({
+    results: [...registerMatches, ...pmecUnmatched].slice(0, 15),
+  });
 });
 
 app.post(

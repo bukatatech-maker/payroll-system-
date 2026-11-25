@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { AuditSecurityView } from './components/AuditSecurityView.tsx';
 import { CasesReviewView } from './components/CasesReviewView.tsx';
+import { GlobalEmployeeSearch } from './components/GlobalEmployeeSearch.tsx';
 import { OverviewReportView, type NavTab } from './components/OverviewReportView.tsx';
 import { RegisterView } from './components/RegisterView.tsx';
 import { ValidationReconciliationView } from './components/ValidationReconciliationView.tsx';
@@ -86,6 +87,14 @@ export default function App() {
     null
   );
   const [runningQuickCycle, setRunningQuickCycle] = useState(false);
+  const [focusedStaff, setFocusedStaff] = useState<{ staffId: string; nonce: number } | null>(
+    null
+  );
+
+  const handleJumpToEmployeeTab = useCallback((tab: NavTab, staffId: string) => {
+    setFocusedStaff({ staffId, nonce: Date.now() });
+    setActiveTab(tab);
+  }, []);
 
   const notify = useCallback((type: 'success' | 'error', message: string) => {
     setNotice({ type, message });
@@ -367,8 +376,8 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top Bar Contract: Breadcrumb on left — single action button on right */}
-        <header className="flex h-16 items-center justify-between gap-8 border-b border-slate-200 bg-white px-6">
+        {/* Top Bar Contract: Breadcrumb on left — global search & action button on right */}
+        <header className="flex h-16 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -379,15 +388,26 @@ export default function App() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 text-sm truncate">
-              <span className="font-medium text-slate-500 whitespace-nowrap">One Payroll</span>
-              <span className="text-slate-400">/</span>
+              <span className="hidden font-medium text-slate-500 whitespace-nowrap sm:inline">
+                One Payroll
+              </span>
+              <span className="hidden text-slate-400 sm:inline">/</span>
               <span className="font-display font-semibold text-slate-900 truncate">
                 {currentNav.label}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-1 items-center justify-end gap-3 min-w-0">
+            <GlobalEmployeeSearch
+              employees={employees}
+              verifications={verifications}
+              reconciliation={reconciliation}
+              cases={cases}
+              auditLogs={auditLogs}
+              disabled={loading || !currentUser}
+              onJumpToTab={handleJumpToEmployeeTab}
+            />
             <button
               type="button"
               onClick={handleTopBarValidation}
@@ -395,7 +415,10 @@ export default function App() {
               className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-emerald-800 disabled:opacity-50 whitespace-nowrap shrink-0"
             >
               <Play className="h-3.5 w-3.5" />
-              <span>{runningQuickCycle ? 'Validating...' : 'Run Validation Cycle'}</span>
+              <span className="hidden sm:inline">
+                {runningQuickCycle ? 'Validating...' : 'Run Validation Cycle'}
+              </span>
+              <span className="sm:hidden">{runningQuickCycle ? '...' : 'Validate'}</span>
             </button>
           </div>
         </header>
@@ -457,6 +480,7 @@ export default function App() {
                   posts={posts}
                   transfers={transfers}
                   returns={returns}
+                  focusedStaff={focusedStaff}
                   onRefresh={fetchAllData}
                   onNotify={notify}
                 />
@@ -466,6 +490,7 @@ export default function App() {
                   currentUser={currentUser}
                   employees={employees}
                   verifications={verifications}
+                  focusedStaff={focusedStaff}
                   onRefresh={fetchAllData}
                   onNotify={notify}
                 />
@@ -474,6 +499,7 @@ export default function App() {
                 <ValidationReconciliationView
                   dashboard={dashboard}
                   reconciliation={reconciliation}
+                  focusedStaff={focusedStaff}
                   onRefresh={fetchAllData}
                   onNotify={notify}
                 />
@@ -482,6 +508,7 @@ export default function App() {
                 <CasesReviewView
                   currentUser={currentUser}
                   cases={cases}
+                  focusedStaff={focusedStaff}
                   onRefresh={fetchAllData}
                   onNotify={notify}
                 />

@@ -253,6 +253,9 @@ export interface DashboardSummary {
     end_month: string;
   };
   monthly_trends: MonthlyTrendPoint[];
+  urgent_payroll_alerts: UrgentPayrollAlert[];
+  regional_anomalies: RegionalAnomalyRow[];
+  top_performing_stations: StationPerformanceRank[];
 }
 
 export interface MonthlyTrendPoint {
@@ -261,5 +264,73 @@ export interface MonthlyTrendPoint {
   exception_cases: number;
   resolved_cases: number;
   payroll_variance_zmw: number;
+}
+
+export interface UrgentPayrollAlert {
+  station_id: string;
+  station_code: string;
+  station_name: string;
+  district: string;
+  baseline_month: string;
+  current_month: string;
+  baseline_variance_zmw: number;
+  current_variance_zmw: number;
+  variance_delta_zmw: number;
+  spike_pct: number;
+  open_cases_count: number;
+  gross_pay_zmw: number;
+}
+
+export interface EmployeeSearchResult {
+  staff_id: string;
+  full_name: string;
+  nrc_number: string | null;
+  station_id: string | null;
+  station_code: string | null;
+  station_name: string;
+  district: string;
+  post_code: string | null;
+  post_title: string | null;
+  employment_status: string;
+  gross_pay: number;
+  net_pay: number;
+  last_verification_outcome: string | null;
+  open_cases_count: number;
+  source: 'register' | 'pmec_unmatched';
+}
+
+export interface RegionalAnomalyCell {
+  rule_code: ValidationRuleCode;
+  rule_short_label: string;
+  count: number;
+  exposure_zmw: number;
+}
+
+export interface RegionalAnomalyRow {
+  district: string;
+  province: string;
+  station_count: number;
+  staff_count: number;
+  total_cases: number;
+  total_exposure_zmw: number;
+  priority_tier: 'Critical' | 'High' | 'Moderate' | 'Nominal';
+  cells: RegionalAnomalyCell[];
+}
+
+export interface StationPerformanceRank {
+  rank: number;
+  station_id: string;
+  station_code: string;
+  station_name: string;
+  district: string;
+  province: string;
+  total_staff: number;
+  verified_staff: number;
+  open_cases: number;
+  resolved_cases: number;
+  return_submitted: boolean;
+  completed_checks: number;
+  total_checks: number;
+  validation_completion_rate: number;
 }
 

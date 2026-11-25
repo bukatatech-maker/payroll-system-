@@ -176,6 +176,15 @@ export function initSchema(): void {
       resolved_cases INTEGER NOT NULL,
       payroll_variance_zmw REAL NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS station_variance_baselines (
+      station_id TEXT NOT NULL,
+      month TEXT NOT NULL,
+      variance_zmw REAL NOT NULL,
+      open_cases_count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (station_id, month),
+      FOREIGN KEY (station_id) REFERENCES stations(id)
+    );
   `);
 }
 
@@ -917,6 +926,7 @@ export function seedInitialDataIfEmpty(): void {
   });
 
   ensureMonthlyTrendsSeeded();
+  ensureStationBaselinesSeeded();
 }
 
 export function ensureMonthlyTrendsSeeded(): void {
@@ -939,5 +949,77 @@ export function ensureMonthlyTrendsSeeded(): void {
   `);
   for (const h of history) {
     stmt.run(h.month, h.label, h.exception_cases, h.resolved_cases, h.payroll_variance_zmw);
+  }
+}
+
+export function ensureStationBaselinesSeeded(): void {
+  const row = db
+    .prepare('SELECT COUNT(*) as cnt FROM station_variance_baselines')
+    .get() as { cnt: number };
+  if (row.cnt > 0) {
+    return;
+  }
+
+  const baselines: Array<{
+    station_id: string;
+    month: string;
+    variance_zmw: number;
+    open_cases_count: number;
+  }> = [
+    // Chibombo Boarding Secondary School (STN-CHB-01): Nov live is K181,350 (+37.4% vs Oct K132,000)
+    { station_id: 'STN-CHB-01', month: '2026-05', variance_zmw: 158000, open_cases_count: 5 },
+    { station_id: 'STN-CHB-01', month: '2026-06', variance_zmw: 168500, open_cases_count: 6 },
+    { station_id: 'STN-CHB-01', month: '2026-07', variance_zmw: 192400, open_cases_count: 7 },
+    { station_id: 'STN-CHB-01', month: '2026-08', variance_zmw: 164000, open_cases_count: 5 },
+    { station_id: 'STN-CHB-01', month: '2026-09', variance_zmw: 146500, open_cases_count: 4 },
+    { station_id: 'STN-CHB-01', month: '2026-10', variance_zmw: 132000, open_cases_count: 4 },
+
+    // Kabwe Highridge Secondary School (STN-KBW-01): Nov live is K62,000 (+39.3% vs Oct K44,500)
+    { station_id: 'STN-KBW-01', month: '2026-05', variance_zmw: 58000, open_cases_count: 3 },
+    { station_id: 'STN-KBW-01', month: '2026-06', variance_zmw: 61200, open_cases_count: 3 },
+    { station_id: 'STN-KBW-01', month: '2026-07', variance_zmw: 69800, open_cases_count: 4 },
+    { station_id: 'STN-KBW-01', month: '2026-08', variance_zmw: 56400, open_cases_count: 3 },
+    { station_id: 'STN-KBW-01', month: '2026-09', variance_zmw: 49000, open_cases_count: 2 },
+    { station_id: 'STN-KBW-01', month: '2026-10', variance_zmw: 44500, open_cases_count: 2 },
+
+    // Kamwala South Secondary School (STN-LSK-01): Nov live is K20,400 (+3.0% vs Oct K19,800)
+    { station_id: 'STN-LSK-01', month: '2026-05', variance_zmw: 28400, open_cases_count: 3 },
+    { station_id: 'STN-LSK-01', month: '2026-06', variance_zmw: 31500, open_cases_count: 3 },
+    { station_id: 'STN-LSK-01', month: '2026-07', variance_zmw: 37800, open_cases_count: 4 },
+    { station_id: 'STN-LSK-01', month: '2026-08', variance_zmw: 29400, open_cases_count: 3 },
+    { station_id: 'STN-LSK-01', month: '2026-09', variance_zmw: 22100, open_cases_count: 2 },
+    { station_id: 'STN-LSK-01', month: '2026-10', variance_zmw: 19800, open_cases_count: 2 },
+
+    // Masala Combined School (STN-NDL-01): Nov live is K10,200 (-10.5% vs Oct K11,400)
+    { station_id: 'STN-NDL-01', month: '2026-05', variance_zmw: 16200, open_cases_count: 2 },
+    { station_id: 'STN-NDL-01', month: '2026-06', variance_zmw: 18900, open_cases_count: 2 },
+    { station_id: 'STN-NDL-01', month: '2026-07', variance_zmw: 19500, open_cases_count: 2 },
+    { station_id: 'STN-NDL-01', month: '2026-08', variance_zmw: 14800, open_cases_count: 2 },
+    { station_id: 'STN-NDL-01', month: '2026-09', variance_zmw: 12900, open_cases_count: 1 },
+    { station_id: 'STN-NDL-01', month: '2026-10', variance_zmw: 11400, open_cases_count: 1 },
+
+    // Mwachisompola Primary School (STN-CHB-02): Nov live is K9,100 (0% vs Oct K9,100)
+    { station_id: 'STN-CHB-02', month: '2026-05', variance_zmw: 11200, open_cases_count: 1 },
+    { station_id: 'STN-CHB-02', month: '2026-06', variance_zmw: 12400, open_cases_count: 2 },
+    { station_id: 'STN-CHB-02', month: '2026-07', variance_zmw: 11800, open_cases_count: 2 },
+    { station_id: 'STN-CHB-02', month: '2026-08', variance_zmw: 10500, open_cases_count: 1 },
+    { station_id: 'STN-CHB-02', month: '2026-09', variance_zmw: 9100, open_cases_count: 1 },
+    { station_id: 'STN-CHB-02', month: '2026-10', variance_zmw: 9100, open_cases_count: 1 },
+
+    // Chongwe District Education Board (STN-CHG-01): Nov live is K0
+    { station_id: 'STN-CHG-01', month: '2026-05', variance_zmw: 4200, open_cases_count: 1 },
+    { station_id: 'STN-CHG-01', month: '2026-06', variance_zmw: 4200, open_cases_count: 1 },
+    { station_id: 'STN-CHG-01', month: '2026-07', variance_zmw: 3100, open_cases_count: 1 },
+    { station_id: 'STN-CHG-01', month: '2026-08', variance_zmw: 1800, open_cases_count: 1 },
+    { station_id: 'STN-CHG-01', month: '2026-09', variance_zmw: 0, open_cases_count: 0 },
+    { station_id: 'STN-CHG-01', month: '2026-10', variance_zmw: 0, open_cases_count: 0 },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT INTO station_variance_baselines (station_id, month, variance_zmw, open_cases_count)
+    VALUES (?, ?, ?, ?)
+  `);
+  for (const b of baselines) {
+    stmt.run(b.station_id, b.month, b.variance_zmw, b.open_cases_count);
   }
 }

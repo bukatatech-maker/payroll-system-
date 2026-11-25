@@ -3,6 +3,7 @@ import type {
   AuditLogEntry,
   DashboardSummary,
   EmployeeRecord,
+  EmployeeSearchResult,
   ExceptionCase,
   ReconciliationItem,
   Station,
@@ -68,6 +69,10 @@ export const api = {
       transfers: TransferRecord[];
       returns: StationReturn[];
     }>('/api/employees'),
+  searchEmployees: (q: string) => {
+    const params = new URLSearchParams({ q });
+    return request<{ results: EmployeeSearchResult[] }>(`/api/employees/search?${params.toString()}`);
+  },
   registerEmployee: (payload: {
     staff_id: string;
     nrc_number: string;

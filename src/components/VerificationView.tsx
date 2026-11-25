@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ClipboardCheck, Search } from 'lucide-react';
 import { api } from '../lib/api.ts';
 import { formatShortDate } from '../lib/roles.ts';
@@ -12,6 +12,7 @@ interface VerificationViewProps {
   currentUser: UserAccount;
   employees: EmployeeRecord[];
   verifications: VerificationRecord[];
+  focusedStaff?: { staffId: string; nonce: number } | null;
   onRefresh: () => Promise<void>;
   onNotify: (type: 'success' | 'error', message: string) => void;
 }
@@ -20,6 +21,7 @@ export function VerificationView({
   currentUser,
   employees,
   verifications,
+  focusedStaff,
   onRefresh,
   onNotify,
 }: VerificationViewProps) {
@@ -35,6 +37,17 @@ export function VerificationView({
   >('Present & Verified');
   const [evidenceNote, setEvidenceNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (focusedStaff?.staffId) {
+      setFilterMode('all');
+      setSearch(focusedStaff.staffId);
+      const matched = employees.find((e) => e.staff_id === focusedStaff.staffId);
+      if (matched) {
+        setSelectedStaff(matched);
+      }
+    }
+  }, [focusedStaff, employees]);
 
   const filteredStaff = useMemo(() => {
     const q = search.trim().toLowerCase();

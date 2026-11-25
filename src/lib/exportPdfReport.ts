@@ -208,6 +208,48 @@ export async function exportOverviewPdfReport(params: {
     y += 7;
   }
 
+  // Urgent Payroll Alerts (>10% variance spike)
+  if (data.urgent_payroll_alerts && data.urgent_payroll_alerts.length > 0) {
+    if (y > 225) {
+      doc.addPage();
+      y = 18;
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(185, 28, 28);
+    doc.text('Urgent Payroll Alerts (Stations Exceeding +10% Variance Spike)', margin, y);
+    y += 4;
+
+    doc.setFontSize(8);
+    doc.setFillColor(254, 242, 242);
+    doc.rect(margin, y, contentWidth, 6.5, 'F');
+    doc.setTextColor(127, 29, 29);
+    doc.text('Station & District', margin + 2.5, y + 4.4);
+    doc.text('Prior Baseline', margin + 96, y + 4.4, { align: 'right' });
+    doc.text('Current Variance', margin + 134, y + 4.4, { align: 'right' });
+    doc.text('Spike', margin + 162, y + 4.4, { align: 'right' });
+    doc.text('Cases', pageWidth - margin - 2.5, y + 4.4, { align: 'right' });
+    y += 6.5;
+
+    doc.setFont('helvetica', 'normal');
+    for (const alert of data.urgent_payroll_alerts) {
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y + 6, pageWidth - margin, y + 6);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${alert.station_name.slice(0, 32)} (${alert.district})`, margin + 2.5, y + 4.2);
+      doc.setTextColor(71, 85, 105);
+      doc.text(formatZmw(alert.baseline_variance_zmw), margin + 96, y + 4.2, { align: 'right' });
+      doc.setTextColor(15, 23, 42);
+      doc.text(formatZmw(alert.current_variance_zmw), margin + 134, y + 4.2, { align: 'right' });
+      doc.setTextColor(185, 28, 28);
+      doc.text(`+${alert.spike_pct.toFixed(1)}%`, margin + 162, y + 4.2, { align: 'right' });
+      doc.setTextColor(180, 83, 9);
+      doc.text(String(alert.open_cases_count), pageWidth - margin - 2.5, y + 4.2, { align: 'right' });
+      y += 6;
+    }
+    y += 7;
+  }
+
   // Check if page break needed before Rules & Districts tables
   if (y > 215) {
     doc.addPage();
@@ -284,15 +326,138 @@ export async function exportOverviewPdfReport(params: {
     doc.text(String(d.open_cases), pageWidth - margin - 2.5, y + 4.2, { align: 'right' });
     y += 6;
   }
+  y += 8;
+
+  // Regional Payroll Anomalies Hotspots
+  if (data.regional_anomalies && data.regional_anomalies.length > 0) {
+    if (y > 225) {
+      doc.addPage();
+      y = 18;
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Regional Payroll Anomalies & Geographic Priority', margin, y);
+    y += 4;
+
+    doc.setFontSize(8);
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, y, contentWidth, 6.5, 'F');
+    doc.setTextColor(71, 85, 105);
+    doc.text('District (Province)', margin + 2.5, y + 4.4);
+    doc.text('Priority', margin + 78, y + 4.4);
+    doc.text('Open Cases', margin + 126, y + 4.4, { align: 'right' });
+    doc.text('Flagged Exposure (ZMW)', pageWidth - margin - 2.5, y + 4.4, { align: 'right' });
+    y += 6.5;
+
+    doc.setFont('helvetica', 'normal');
+    for (const reg of data.regional_anomalies) {
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y + 6, pageWidth - margin, y + 6);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${reg.district} (${reg.province})`, margin + 2.5, y + 4.2);
+      doc.setTextColor(
+        reg.priority_tier === 'Critical' ? 185 : reg.priority_tier === 'High' ? 180 : 71,
+        reg.priority_tier === 'Critical' ? 28 : reg.priority_tier === 'High' ? 83 : 85,
+        reg.priority_tier === 'Critical' ? 28 : reg.priority_tier === 'High' ? 9 : 105
+      );
+      doc.text(reg.priority_tier, margin + 78, y + 4.2);
+      doc.setTextColor(15, 23, 42);
+      doc.text(String(reg.total_cases), margin + 126, y + 4.2, { align: 'right' });
+      doc.text(formatZmw(reg.total_exposure_zmw), pageWidth - margin - 2.5, y + 4.2, {
+        align: 'right',
+      });
+      y += 6;
+    }
+    y += 8;
+  }
+
+  // Top Performance Stations (Ranked by Validation Completion Rate)
+  if (data.top_performing_stations && data.top_performing_stations.length > 0) {
+    if (y > 220) {
+      doc.addPage();
+      y = 18;
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Top Performance — Station Validation Completion Ranking', margin, y);
+    y += 4;
+
+    doc.setFontSize(8);
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, y, contentWidth, 6.5, 'F');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Rank & Station', margin + 2.5, y + 4.4);
+    doc.text('Verified', margin + 106, y + 4.4, { align: 'right' });
+    doc.text('Return', margin + 136, y + 4.4, { align: 'right' });
+    doc.text('Open Cases', margin + 160, y + 4.4, { align: 'right' });
+    doc.text('Rate', pageWidth - margin - 2.5, y + 4.4, { align: 'right' });
+    y += 6.5;
+
+    doc.setFont('helvetica', 'normal');
+    for (const stn of data.top_performing_stations) {
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y + 6, pageWidth - margin, y + 6);
+      doc.setTextColor(15, 23, 42);
+      doc.text(
+        `#${stn.rank} ${stn.station_name.slice(0, 34)} (${stn.district})`,
+        margin + 2.5,
+        y + 4.2
+      );
+      doc.text(`${stn.verified_staff}/${stn.total_staff}`, margin + 106, y + 4.2, {
+        align: 'right',
+      });
+      doc.text(stn.return_submitted ? 'Submitted' : 'Overdue', margin + 136, y + 4.2, {
+        align: 'right',
+      });
+      doc.text(String(stn.open_cases), margin + 160, y + 4.2, { align: 'right' });
+      doc.setTextColor(4, 120, 87);
+      doc.text(`${stn.validation_completion_rate.toFixed(1)}%`, pageWidth - margin - 2.5, y + 4.2, {
+        align: 'right',
+      });
+      y += 6;
+    }
+    y += 8;
+  }
+
+  // Strategic Recommendations & Implementation Summary (Table 5.1)
+  if (y > 235) {
+    doc.addPage();
+    y = 18;
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Summary of Deployment Recommendations & Governance Safeguards', margin, y);
+  y += 5;
+
+  const recs = [
+    '1. Standardize Records: Enforce uniform Staff IDs across HR & PMEC and mandate monthly digital station returns.',
+    '2. Scheduled Verifications: Conduct routine multi-level physical & digital checks at school, district, and national levels.',
+    '3. Action Tracking: Assign every flagged mismatch a case number, independent reviewer, and deadline without stopping pay.',
+    '4. Pilot Implementation: Validate control modules in selected pilot districts before national MPSA deployment.',
+  ];
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(51, 65, 85);
+  for (const line of recs) {
+    doc.text(line, margin + 1.5, y);
+    y += 5;
+  }
 
   // Footer
-  doc.setFontSize(7.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text(
-    'One Payroll Management System · Unified PMEC Control Layer Prototype · Tamper-Evident Audit Chain Active',
-    margin,
-    287
-  );
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p += 1) {
+    doc.setPage(p);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `One Payroll Management System · Unified PMEC Control Layer · Page ${p} of ${totalPages}`,
+      margin,
+      287
+    );
+  }
 
   const fileName = `One_Payroll_Report_${dateRange.start_month}_to_${dateRange.end_month}.pdf`;
   doc.save(fileName);

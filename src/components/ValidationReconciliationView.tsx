@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Play, ShieldAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Play, ShieldAlert, X } from 'lucide-react';
 import { api } from '../lib/api.ts';
 import { formatZmw } from '../lib/roles.ts';
 import type { DashboardSummary, ReconciliationItem } from '../types/payroll.ts';
@@ -7,6 +7,7 @@ import type { DashboardSummary, ReconciliationItem } from '../types/payroll.ts';
 interface ValidationReconciliationViewProps {
   dashboard: DashboardSummary | null;
   reconciliation: ReconciliationItem[];
+  focusedStaff?: { staffId: string; nonce: number } | null;
   onRefresh: () => Promise<void>;
   onNotify: (type: 'success' | 'error', message: string) => void;
 }
@@ -53,16 +54,26 @@ const RULE_CATALOG = [
 export function ValidationReconciliationView({
   dashboard,
   reconciliation,
+  focusedStaff,
   onRefresh,
   onNotify,
 }: ValidationReconciliationViewProps) {
   const [running, setRunning] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'mismatches'>('all');
+  const [staffFilter, setStaffFilter] = useState<string>('');
 
-  const visibleItems =
-    statusFilter === 'mismatches'
-      ? reconciliation.filter((r) => r.match_status !== 'Matched')
-      : reconciliation;
+  useEffect(() => {
+    if (focusedStaff?.staffId) {
+      setStatusFilter('all');
+      setStaffFilter(focusedStaff.staffId);
+    }
+  }, [focusedStaff]);
+
+  const visibleItems = reconciliation.filter((r) => {
+    if (statusFilter === 'mismatches' && r.match_status === 'Matched') return false;
+    if (staffFilter && r.staff_id !== staffFilter) return false;
+    return true;
+  });
 
   const mismatchCount = reconciliation.filter((r) => r.match_status !== 'Matched').length;
 
@@ -161,27 +172,39 @@ export function ValidationReconciliationView({
               {reconciliation.length} total records compared · {mismatchCount} reconciliation discrepancy item(s) detected
             </p>
           </div>
-          <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('all')}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
-                statusFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-              }`}
-            >
-              All Lines ({reconciliation.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('mismatches')}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
-                statusFilter === 'mismatches'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600'
-              }`}
-            >
-              Discrepancies Only ({mismatchCount})
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {staffFilter && (
+              <button
+                type="button"
+                onClick={() => setStaffFilter('')}
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 font-mono text-xs text-slate-700 hover:bg-slate-50"
+              >
+                <span>Filtered: {staffFilter}</span>
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                  statusFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                All Lines ({reconciliation.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('mismatches')}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap shrink-0 ${
+                  statusFilter === 'mismatches'
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-600'
+                }`}
+              >
+                Discrepancies Only ({mismatchCount})
+              </button>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
